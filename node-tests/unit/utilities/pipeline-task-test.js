@@ -1,13 +1,13 @@
 /* jshint expr:true */
-var DeployTask = require('../../../lib/utilities/deploy-task');
+var PipelineTask = require('../../../lib/utilities/pipeline-task');
 var expect = require('chai').expect;
 var RSVP = require('rsvp');
 
-var deployTask;
+var pipelineTask;
 var hookCalled;
 var indexHTML;
 
-describe('DeployTask', function() {
+describe('PipelineTask', function() {
   it('has multiple deployment hooks available', function() {
     var hooks = [
       'willDeploy',
@@ -17,10 +17,10 @@ describe('DeployTask', function() {
       'didDeploy'
     ];
 
-    deployTask = new DeployTask();
+    pipelineTask = new PipelineTask();
 
     hooks.forEach(function(hook) {
-      expect(deployTask.deploymentHooks[hook]).to.be.ok;
+      expect(pipelineTask.deploymentHooks[hook]).to.be.ok;
     });
   });
 
@@ -49,18 +49,18 @@ describe('DeployTask', function() {
         ]
       };
 
-      deployTask = new DeployTask({
+      pipelineTask = new PipelineTask({
         project: project
       });
     });
 
     it('knows about hooks from installed `ember-cli-deploy`-addons', function() {
-      expect(deployTask.deploymentHooks.didDeploy.length).to.be.gt(0);
+      expect(pipelineTask.deploymentHooks.didDeploy.length).to.be.gt(0);
     });
 
     context('#executeDeploymentHook', function() {
       it('can execute deployment-hooks registered from installed `ember-cli-deploy`-addons', function() {
-        deployTask.executeDeploymentHook('didDeploy');
+        pipelineTask.executeDeploymentHook('didDeploy');
 
         expect(hookCalled).to.be.ok;
       });
@@ -68,13 +68,13 @@ describe('DeployTask', function() {
       it('can pass context to the called hooks', function() {
         var newIndexHTML = '<h2>Welcome to Ember.js</h2>'
 
-        deployTask.executeDeploymentHook('upload', newIndexHTML);
+        pipelineTask.executeDeploymentHook('upload', newIndexHTML);
 
         expect(indexHTML).to.eql(newIndexHTML);
       });
 
       it('returns a promise', function() {
-        var promise = deployTask.executeDeploymentHook('didDeploy');
+        var promise = pipelineTask.executeDeploymentHook('didDeploy');
 
         expect(promise.then).to.be.ok;
       });
@@ -107,7 +107,7 @@ describe('DeployTask', function() {
           addons: [deploymentAddon]
         }
 
-        deployTask = new DeployTask({
+        pipelineTask = new PipelineTask({
           project:project,
           deployment: deployment,
           run: function() {
@@ -116,7 +116,7 @@ describe('DeployTask', function() {
           }
         });
 
-        deployTask.run()
+        pipelineTask.run()
           .then(function() {
             expect(deployment.data.started).to.be.ok;
             expect(deployment.data.success).to.be.ok;
