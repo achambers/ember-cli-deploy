@@ -3,13 +3,13 @@ var PipelineTask = require('../../../lib/utilities/pipeline-task');
 var expect = require('chai').expect;
 var RSVP = require('rsvp');
 
-var pipelineTask;
+var task;
 var hookCalled;
 var indexHTML;
 
 describe('PipelineTask', function() {
   it('has multiple deployment hooks available', function() {
-    var hooks = [
+    var allowedHooks = [
       'willDeploy',
       'build',
       'upload',
@@ -17,10 +17,10 @@ describe('PipelineTask', function() {
       'didDeploy'
     ];
 
-    pipelineTask = new PipelineTask();
+    task = new PipelineTask({config: {project: {addons: []}}});
 
-    hooks.forEach(function(hook) {
-      expect(pipelineTask.deploymentHooks[hook]).to.be.ok;
+    Object.keys(task.deploymentHooks).forEach(function(hookName) {
+      expect(allowedHooks).to.contain(hookName);
     });
   });
 
@@ -30,17 +30,20 @@ describe('PipelineTask', function() {
       indexHTML = '';
 
       var deploymentPlugin = {
-        type: 'ember-deploy-addon',
-        name: 'Deployment-Plugin',
-        hooks: {
-          upload: function(html) {
-            indexHTML = html;
-          },
+        name: 'ember-cli-deploy-test-plugin',
+        createDeployPlugin: function(options) {
+          return {
+            name: options.name,
+            upload: function(html) {
+              indexHTML = html;
+            },
 
-          didDeploy: function() {
-            hookCalled = true;
+            didDeploy: function() {
+              hookCalled = true;
+            }
           }
-        }
+        },
+        pkg: {keywords: ['ember-cli-deploy-plugin']}
       };
 
       var project = {
@@ -49,18 +52,18 @@ describe('PipelineTask', function() {
         ]
       };
 
-      pipelineTask = new PipelineTask({
-        project: project
+      task = new PipelineTask({
+        config: {project: project}
       });
     });
 
-    it('knows about hooks from installed `ember-cli-deploy`-addons', function() {
-      expect(pipelineTask.deploymentHooks.didDeploy.length).to.be.gt(0);
+    it('knows about hooks from installed `ember-cli-deploy`-plugins', function() {
+      expect(task.deploymentHooks.didDeploy.length).to.be.gt(0);
     });
 
     context('#executeDeploymentHook', function() {
-      it('can execute deployment-hooks registered from installed `ember-cli-deploy`-addons', function() {
-        pipelineTask.executeDeploymentHook('didDeploy');
+      it('can execute deployment-hooks registered from installed `ember-cli-deploy`-plugins', function() {
+        task.executeDeploymentHook('didDeploy');
 
         expect(hookCalled).to.be.ok;
       });
@@ -68,13 +71,13 @@ describe('PipelineTask', function() {
       it('can pass context to the called hooks', function() {
         var newIndexHTML = '<h2>Welcome to Ember.js</h2>'
 
-        pipelineTask.executeDeploymentHook('upload', newIndexHTML);
-
-        expect(indexHTML).to.eql(newIndexHTML);
+        task.executeDeploymentHook('upload', newIndexHTML).then(function() {
+          expect(indexHTML).to.eql(newIndexHTML);
+        });
       });
 
       it('returns a promise', function() {
-        var promise = pipelineTask.executeDeploymentHook('didDeploy');
+        var promise = task.executeDeploymentHook('didDeploy');
 
         expect(promise.then).to.be.ok;
       });
@@ -88,27 +91,30 @@ describe('PipelineTask', function() {
         };
 
         var deploymentAddon = {
-          type: 'ember-deploy-addon',
-          name: 'Deployment-Plugin',
-          hooks: {
-            willDeploy: function() {
-              this.deployment.data.started = true;
-              return RSVP.resolve();
-            },
+          name: 'ember-cli-deploy-test-plugin',
+          createDeployPlugin: function(options) {
+            return {
+              name: options.name,
+              willDeploy: function() {
+                this.deployment.data.started = true;
+                return RSVP.resolve();
+              },
 
-            didDeploy: function() {
-              this.deployment.data.success = true;
-              return RSVP.resolve();
+              didDeploy: function() {
+                this.deployment.data.success = true;
+                return RSVP.resolve();
+              }
             }
-          }
+          },
+          pkg: {keywords: ['ember-cli-deploy-plugin']}
         };
 
         var project = {
           addons: [deploymentAddon]
         }
 
-        pipelineTask = new PipelineTask({
-          project:project,
+        task = new PipelineTask({
+          config: {project: project},
           deployment: deployment,
           run: function() {
             return this.executeDeploymentHook('willDeploy')
@@ -116,7 +122,7 @@ describe('PipelineTask', function() {
           }
         });
 
-        pipelineTask.run()
+        task.run()
           .then(function() {
             expect(deployment.data.started).to.be.ok;
             expect(deployment.data.success).to.be.ok;
