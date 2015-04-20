@@ -67,7 +67,7 @@ describe('PipelineTask', function() {
       expect(context.data).to.eql({});
     });
 
-    it('registers  addons with correct keywords that create the deploy plugin', function() {
+    it('registers addons with correct keywords that create the deploy plugin', function() {
       var project = {
         addons: [
           {
@@ -80,8 +80,7 @@ describe('PipelineTask', function() {
             createDeployPlugin: function() {
               return {
                 willDeploy: function() {},
-                upload: function() {},
-                didDeploy: function() {}
+                upload: function() {}
               };
             }
           }
@@ -92,14 +91,14 @@ describe('PipelineTask', function() {
         project: project,
         ui: mockUi,
         config: mockConfig,
-        appConfig: mockAppConfig
+        appConfig: mockAppConfig,
+        hooks: ['willDeploy', 'upload']
       });
 
-      var registeredHooks = task._deploymentHooks;
+      var registeredHooks = task._pipeline._pipelineHooks;
 
       expect(registeredHooks.willDeploy[0]).to.be.a('function');
       expect(registeredHooks.upload[0]).to.be.a('function');
-      expect(registeredHooks.didDeploy[0]).to.be.a('function');
     });
 
     it('does not register addons missing the correct keywords', function() {
@@ -123,12 +122,13 @@ describe('PipelineTask', function() {
         project: project,
         ui: mockUi,
         config: mockConfig,
-        appConfig: mockAppConfig
+        appConfig: mockAppConfig,
+        hooks: ['build']
       });
 
-      var registeredHooks = task._deploymentHooks;
+      var registeredHooks = task._pipeline._pipelineHooks;
 
-      expect(registeredHooks.willDeploy[0]).to.be.undefined;
+      expect(registeredHooks.willDeploy).to.be.undefined;
     });
 
     it('does not register addons that don\'t implement the createDeployPlugin function', function() {
@@ -152,147 +152,38 @@ describe('PipelineTask', function() {
         project: project,
         ui: mockUi,
         config: mockConfig,
-        appConfig: mockAppConfig
+        appConfig: mockAppConfig,
+        hooks: ['willDeploy']
       });
 
-      var registeredHooks = task._deploymentHooks;
+      var registeredHooks = task._pipeline._pipelineHooks;
 
       expect(registeredHooks.willDeploy[0]).to.be.undefined;
     });
   });
 
   describe('running the pipeline task', function() {
-    it ('runs the hook function, passing in the deployment context', function(done) {
-      var ctx;
-      var project = {
-        addons: [
-          {
-            name: 'ember-cli-deploy-test-plugin',
-            pkg: {
-              keywords: [
-                'ember-cli-deploy-plugin'
-              ]
-            },
-            createDeployPlugin: function() {
-              return {
-                willDeploy: function(context) {
-                  ctx = context;
-                  return Promise.resolve();
-                }
-              };
-            }
-          }
-        ]
-      };
-
+    it ('runs the pipeline, passing in the context', function(done) {
       var task = new PipelineTask({
-        project: project,
+        project: mockProject,
         ui: mockUi,
         config: mockConfig,
-        appConfig: mockAppConfig
+        appConfig: mockAppConfig,
+        hooks: ['willDeploy']
       });
+
+      task._pipeline = {run: function(context) {
+        return Promise.resolve(context);
+      }};
 
       task.run()
-        .then(function() {
-          expect(ctx.ui).to.equal(mockUi);
-          expect(ctx.config).to.equal(mockConfig);
-          expect(ctx.appConfig).to.equal(mockAppConfig);
-          expect(ctx.data).to.eql({});
+        .then(function(context) {
+          expect(context).to.eql(task._context);
           done();
         })
-        .catch(function() {
-          done(arguments[0]);
+        .catch(function(error) {
+          done(error);
         });
-    });
-
-    describe('running all deploy hooks', function() {
-      it ('runs functions for all hooks', function(done) {
-        var functionsRun = 0;
-        var fn = function() { functionsRun += 1;}
-
-        var project = {
-          addons: [
-            {
-              name: 'ember-cli-deploy-test-plugin',
-              pkg: {
-                keywords: [
-                  'ember-cli-deploy-plugin'
-                ]
-              },
-              createDeployPlugin: function() {
-                return {
-                  willDeploy: fn,
-                  build: fn,
-                  upload: fn,
-                  activate: fn,
-                  didDeploy: fn,
-                };
-              }
-            }
-          ]
-        };
-
-        var task = new PipelineTask({
-          project: project,
-          ui: mockUi,
-          config: mockConfig,
-          appConfig: mockAppConfig
-        });
-
-        task.run()
-          .then(function() {
-            expect(functionsRun).to.equal(5);
-            done();
-          })
-          .catch(function() {
-            done(arguments[0]);
-          });
-      });
-    });
-
-    describe('running specific deploy hooks', function() {
-      it ('runs only the functions specified', function(done) {
-        var functionsRun = 0;
-        var fn = function() { functionsRun += 1;}
-
-        var project = {
-          addons: [
-            {
-              name: 'ember-cli-deploy-test-plugin',
-              pkg: {
-                keywords: [
-                  'ember-cli-deploy-plugin'
-                ]
-              },
-              createDeployPlugin: function() {
-                return {
-                  willDeploy: fn,
-                  build: fn,
-                  upload: fn,
-                  activate: fn,
-                  didDeploy: fn,
-                };
-              }
-            }
-          ]
-        };
-
-        var task = new PipelineTask({
-          project: project,
-          ui: mockUi,
-          config: mockConfig,
-          appConfig: mockAppConfig
-        });
-
-        task.run(['build', 'activate', 'didDeploy'])
-          .then(function() {
-            expect(functionsRun).to.equal(3);
-            done();
-          })
-          .catch(function() {
-            done(arguments[0]);
-          });
-      });
     });
   });
 });
