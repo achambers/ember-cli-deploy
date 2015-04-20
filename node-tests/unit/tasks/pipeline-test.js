@@ -4,7 +4,7 @@ var expect       = require('chai').expect;
 var assert       = require('chai').assert;
 
 describe('PipelineTask', function() {
-  var mockProject   = {addons: []};
+  var mockProject   = {addons: [], name: function() {return 'mock-project';}};
   var mockConfig    = {};
   var mockAppConfig = {};
   var mockUi        = {};
@@ -16,27 +16,6 @@ describe('PipelineTask', function() {
       };
 
       expect(fn).to.throw('No project passed to pipeline task');
-    });
-
-    it ('raises an error if deploy config is not provided', function() {
-      var fn = function() {
-        new PipelineTask({
-          project: mockProject
-        });
-      };
-
-      expect(fn).to.throw('No deploy config passed to pipeline task');
-    });
-
-    it ('raises an error if app config is not provided', function() {
-      var fn = function() {
-        new PipelineTask({
-          project: mockProject,
-          config: mockConfig
-        });
-      };
-
-      expect(fn).to.throw('No app config passed to pipeline task');
     });
 
     it ('raises an error if ui is not provided', function() {
@@ -54,8 +33,8 @@ describe('PipelineTask', function() {
     it ('creates the deployment context object', function() {
       var task = new PipelineTask({
         project: mockProject,
-        config: mockConfig,
-        appConfig: mockAppConfig,
+        deployEnvironment: 'development',
+        deployConfigPath: 'config/deploy.js',
         ui: mockUi
       });
 
