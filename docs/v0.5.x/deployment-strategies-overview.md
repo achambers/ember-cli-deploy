@@ -2,27 +2,83 @@
 title: Deployment Strategies Overview
 ---
 
-Before starting to use ember-cli-deploy you need to decide what you want your deployment strategy to be.
+ember-cli-deploy is great at allowing you to compose plugins to implement a quick and maintainable deployment pipeline.
 
-* Are you going to deploy the ember app every time you deploy your backend?
-* Are you going to deploy frontend and backend independently?
-* Will the backend serve your index.html and assets or only one or neither?
+What it is not great at is guessing how you would like to deploy your application, where you'd like to deploy it, whether
+you'd like to gzip your assets or whether you'd like to notify your team members on slack after a successful deploy.
 
-All these approaches have pros and cons that vary depending on your app.
+Just like you need to have an idea of what functionality you would like your ember application to have before you install ember-cli addons, you also
+need to have a good idea of how you would like your deployment to work before you install ember-cli-deploy and it's plugins.
 
-A popular approach that spearheaded the original ember-cli-deploy project is the [lighting strategy](../the-lightning-strategy) but with the [plugin system](../plugins-overview) you now have all the freedom you need.
+## Ok, so what do I need to think about?
+
+Almost every single project will require a build to begin with, but after this it's hard for ember-cli-deploy to guess what is needed.
+
+Do you want to:
+
+* upload your assets to a different place than your index.html?
+* push your index.html to redis S3?
+* deploy your whole application to a SaaS platform like Firebase hosting?
+* gzip your assets before uploading them?
+* notify your team members of a successful deploy
+
+These things (and more) are the sorts of things that you need to have thought about before being able to successully deploy your application.
+
+Because ember-cli-deploy simply provides you with a [deployment pipeline](../pipeline-overview) it is up to you to decide what your deployment strategy will look like
+and therefore which plugins you will need to install to implement that stratgey.
+
+We are well aware that this level of detail of the deployment environment may not be something everyone has thought about in detail so this section is
+going to suggest things you might want to think about when coming up with a deployment strategy that makes sense for you.
+
+The following are some things that you should think through to make your ember-cli-deploy experience as successful as possible:
+
+### Building your project
+
+All projects need to be built, that's one thing we're pretty confident about. So for this we have created the [ember-cli-deploy-build](https://github.com/ember-cli-deploy/ember-cli-deploy-build) plugin.
+
+This plugin uses the standard ember-cli build process. However if you have something more custom you need to do you can always [write your own plugin](../writing-a-plugin).
+
+### Identifying your deployed revision
+
+Often you might want to identify a release by some unique identifier.  Maybe you want to push this to firebase so that your ember app can intelligently tell when a user is using
+and out of date version of your app. If so, you need to think about where that unique indentifier will come from. Should it be a fingerprint of your index.html file, or maybe the git SHA
+that you are deploying? Either way, we have a plugin called [ember-cli-deploy-revision-data](https://github.com/ember-cli-deploy/ember-cli-deploy-revision-data) that can help
+determine a unique identifier for you.
+
+### Hosting your project files
+
+Where do you want your project files hosted? Some people like to use a SaaS platform such as Firebase. Or maybe S3, Heroku or even Github Pages is more appropriate for you.
+Or maybe you just want to scp your project files to a server internal to your company.
+
+If you can't find a suitable plugin in the list of [existing plugins](../plugins) then maybe try [writing your own](../writing-a-plugin).
+
+### Gzipping assets
+
+Often people like to gzip their assets to minimise the payload user's browsers need to download when using an ember application. You probably want to think about
+doing this when storing your assets on S3. [ember-cli-deploy-gzip](https://github.com/ember-cli-deploy/ember-cli-deploy-gzip) is a good plugin to look at for this functionality.
+
+### Source maps
+
+Do you want to upload source maps to a bug reporting service or some other hosted service to make it easier to debug minified JS? This can often be handy when using services
+like BugSnag, Sentry and Raygun.
+
+### Using a manifest file
+
+Manifest files are helpful when uploading assets. Often some assets remain unchanged in which case there is no benefit in uploading them again. A manifest file is used
+to keep track of which files have been uploaded so that they don't need to be re-uploaded next time you deploy. We have a plugin for this called [ember-cli-deploy-manifest](https://github.com/ember-cli-deploy/ember-cli-deploy-manifest).
+
+### Notifying team members of deployments
+
+Once a deploy has finished successfully (or maybe failed as the case may be) you may find it handy to notify your team. Currently we have the [ember-cli-deploy-slack](https://github.com/ember-cli-deploy/ember-cli-deploy-slack)
+plugin to send notificaitons to Slack. However if you use a different platform or prefer to send emails instead, try [writing your own plugin](../writing-a-plugin).
 
 
-## What is a deployment strategy?
+## Popular Deployment Strategies
 
-Any deploy process needs to do a few things
+Over time different deployment strategy patterns emerge as smart ways of deploying an ember application. We want to make it as easy as possible
+for you to get up and deploying so we are putting together a list of popular deployment strategies that you can employ. This list is a living document
+and will grow as we discover new and intersting ways that people are deploying their ember applications with ember-cli-deploy.
 
-1. build your project files
-2. store the compiled assets somewhere (s3/cloudfront or similar, your own application server, a 3rd party platform)
-3. optionally prefix the assets (fingerprinting) so that you don't have to worry about cache invalidation
-4. assets gzip for performance boost
-5. store and serve the ember-cli `index.html` that points to the created assets
-6. notify your team chat of a successful build/deploy **optional**
-7. store different *releases* and easily switch between them**optional**
+The list of deployment strategies is as follows:
 
-Lots of [plugins](../plugins) are already available and by simply composing them you'll be able to build your own deploy strategy, for the most common strategies [plugin packs](../plugin-packs) are already available to get you up and running in no time!
+* [The Lightning Strategy](../the-lightning-strategy)
